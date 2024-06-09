@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-app-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web-app-server
+  template:
+    metadata:
+      labels:
+        app: web-app-server
+    spec:
+      containers:
+        - env:
+            - name: MYSQL_ADDR
+              value: "127.0.0.1"
+            - name: MYSQL_PORT
+              value: "3306"
+            - name: MYSQL_DB
+              value: "web_app_sample"
+            - name: MYSQL_USER
+              value: "root"
+            - name: MYSQL_PASSWORD
+              value: "xxxxxx"
+            - name: REDIS_ADDR
+              value: "127.0.0.1:6379"
+            - name: REDIS_PASSWORD
+              value: "xxxxxx"
+            - name: NACOS_IP_ADDR
+              value: "127.0.0.1:6379"
+            - name: NACOS_PORT
+              value: "xxxxxx"
+            - name: NACOS_NAMESPACE_ID
+              value: "127.0.0.1:6379"
+            - name: NACOS_DATAID
+              value: "dataid"
+            - name: NACOS_GROUP
+              value: "group"
+            - name: HTTP_PORT
+              value: "8090"
+            - name: LOG_LEVEL
+              value: "debug"
+          image: image-register:ylj
+          imagePullPolicy: IfNotPresent
+          name: web-app-server
+          ports:
+            - containerPort: 8090
+              protocol: TCP
+              name: httpserver
+          resources:
+            limits:
+              cpu: "1"
+              memory: 2G
+            requests:
+              cpu: "1"
+              memory: 2G
+      restartPolicy: Always
+      serviceAccountName: default
+      terminationGracePeriodSeconds: 30
+

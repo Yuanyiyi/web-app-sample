@@ -1,0 +1,10 @@
+namespace: test1010
+resources:
+  - ../../../base/
+  - ingress.yaml
+patchesStrategicMerge:
+  - deployment.yaml
+images:
+  - name: ylj.aliyuncs.com/manager
+    newName:  ylj.aliyuncs.com/manager
+    newTag: test-ylj

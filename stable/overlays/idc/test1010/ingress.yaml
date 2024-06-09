@@ -1,0 +1,19 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: web-app-server-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx-web
+spec:
+  rules:
+  - host: web-app-server-verse.co
+    http:
+      paths:
+      - backend:
+          serviceName: web-app-server
+          servicePort: 8090
+        pathType: ImplementationSpecific
+  tls:
+  - hosts:
+      - web-app-server-verse.co
+    secretName: auto-verse.co-all

@@ -1,0 +1,90 @@
+# This file is a template, and might need editing before it works on your project.
+# To contribute improvements to CI/CD templates, please follow the Development guide at:
+# https://docs.gitlab.com/ee/development/cicd/templates.html
+# This specific template is located at:
+# https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Go.gitlab-ci.yml
+
+# CI_JOB_STATUS k8s runner下有bug  不管成功还是失败都是running
+# https://gitlab.com/gitlab-org/gitlab-runner/-/merge_requests/3751
+# 使用文件保存job状态
+include:
+  remote: http://gitlab.appshahe.com/ops/ci-templates/raw/master/metaverse/go/ci-pod.yml
+  
+image: metaapp-registry-vpc.cn-beijing.cr.aliyuncs.com/metaops/1.20.2-bullseye
+
+stages:
+  - test
+  - testbuild
+  - install
+  - build
+  - sync
+
+unit_test:
+  stage: test
+  tags:
+    - k8s-ops-metaverse-default-pre
+  script:
+    - |
+      cd ../web-app-sample
+      make test
+      echo $? >.AT_JOB_STATUS
+      ls -al
+  after_script:
+    - |
+      cd ../web-app-sample
+      ls -al
+      if [ -e ".AT_JOB_STATUS" ]; then
+        echo "File exists."
+        AT_JOB_STATUS=`cat .AT_JOB_STATUS`
+      else
+        echo "File does not exist."
+        AT_JOB_STATUS=1
+      fi
+
+      if [ $AT_JOB_STATUS == 0 ]; then
+        echo 'This will only run on success'
+        UnitTest_Result='Success'
+      else
+        echo 'This will only run when job failed or is cancelled'
+        UnitTest_Result='Failed'
+      fi
+      echo $UnitTest_Result
+
+      POST_JSON='{ "msg_type": "post", "content": { "post": { "zh_cn": { "title": "Unit Test", "content": [[
+        { "tag": "text", "text": "web-app-sample '$UnitTest_Result' " },
+        { "tag": "text", "text": " <'$CI_COMMIT_BRANCH'> " },
+        { "tag": "a", "text": "JOB_URL", "href": "'$CI_JOB_URL'" }
+                ]]}}}}'
+
+      echo $POST_JSON
+      curl -X POST -H "Content-Type: application/json"  -d "$POST_JSON" https://open.feishu.cn/open-apis/bot/xxx
+
+build-stress-test:
+  stage: testbuild
+  when: manual
+  needs: [unit_test]
+  tags:
+    - k8s-ops-metaverse-default
+  artifacts:
+    name: web-app-sample_$CI_COMMIT_BRANCH_$CI_COMMIT_SHORT_SHA
+    paths:
+      - $CI_PROJECT_DIR/stress_test
+    expire_in: 2 week
+  script:
+    - |
+      echo $CI_PROJECT_DIR
+      echo $CI_COMMIT_BRANCH
+      cd ../web-app-sample
+      go env -w GOPROXY=https://goproxy.cn,direct
+      RUN export CGO_ENABLED=0 GOOS=windows GOARCH=amd64 &go build -o build/stress_test.exe cmd/stress_test/main.go
+      go build -o build/stress_test cmd/stress_test/main.go
+      ls build/
+      mkdir stress_test
+      cp -r build/stress_test stress_test/
+      cp -r build/stress_test.exe stress_test/
+      cp stress_test.sh stress_test/
+      cp stress_test使用说明.md stress_test/
+      ls -al
+
+
+
